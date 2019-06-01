@@ -1,10 +1,13 @@
 package view
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 const (
-	C = 6
-	H = 3
+	C    = 20
+	Heal = 3
+	Swap = 3
 )
 
 type Message struct {
@@ -15,8 +18,18 @@ type Message struct {
 
 type Buffer []Message
 
+func (m *Message) Equal(n Message) bool {
+	if m.Addr == n.Addr && m.Age == n.Age && m.InDegree == n.InDegree {
+		return true
+	}
+	return false
+}
+
+// ======================================================================
+
+// View holds my own address and InDegree estimate, and the peer window
 type View struct {
-	Self     string
+	Addr     string
 	InDegree int
 	Peer     Buffer
 }
@@ -28,7 +41,8 @@ func (v *View) Permute() {
 	})
 }
 
-func (v *View) rmMax() Message {
+// rmMaxAge removes the oldest message in view. Considers InDegree
+func (v *View) rmMaxAge() Message {
 	var m, max Message
 	max = v.Peer[0]
 	idx := 0
@@ -43,21 +57,33 @@ func (v *View) rmMax() Message {
 	return max
 }
 
-// AgeOut moves the oldest H to the end of the window. Use inDegree as an age factor
+// AgeOut moves the oldest Heal to the end of the window. Use inDegree as an age factor
 func (v *View) AgeOut() {
-	b := make(Buffer, H)
-	for i := 0; i < H; i++ {
-		b[i] = v.rmMax()
+	b := make(Buffer, Heal)
+	for i := 0; i < Heal; i++ {
+		b[i] = v.rmMaxAge()
 	}
 	v.Peer = append(v.Peer, b...)
 }
+
+func (v *View) Send(peer string) Buffer {
+	b := Buffer{Message{v.Addr, 0, v.InDegree}}
+	v.Permute()
+	v.AgeOut()
+	for i := 0; i < C/2-1; i++ {
+		b = append(b, v.Peer[i])
+	}
+	return b
+}
+
+// ========================================================================
 
 func (v *View) rmDups() {
 	seen := make(map[string]Message)
 	rm := make([]int, 0)
 
 	for i, m := range v.Peer {
-		if ok, n := seen[m.Addr]; ok {
+		if n, ok := seen[m.Addr]; ok {
 			if m.Equal(n) {
 				rm = append(rm, i)
 			}
@@ -65,16 +91,35 @@ func (v *View) rmDups() {
 			seen[m.Addr] = m
 		}
 	}
+
+	for _, i := range rm {
+		v.Peer = append(v.Peer[:i], v.Peer[i+1:]...)
+	}
+
 }
 
-func (v *View) Send(peer string) Buffer {
-	b := Buffer{Message{v.Self, 0, v.InDegree}}
-	v.Permute()
-	v.AgeOut()
-	for i := 0; i < C/2-1; i++ {
-		b = append(b, v.Peer[i])
+func (v *View) rmOld() {
+	count := Min(Heal, len(v.Peer)-C)
+	for i := 0; i < count; i++ {
+		v.rmMaxAge()
 	}
-	return b
+}
+
+func (v *View) rmHead() {
+	count := Max(Swap, len(v.Peer)-C)
+	v.Peer = v.Peer[:count+1]
+}
+
+func (v *View) rmRand() {
+	count := len(v.Peer) - C
+	seen := make(map[int]bool)
+	for i := 0; i < count; i++ {
+		j := rand.Int()
+		if _, ok := seen[j]; ok {
+			continue
+		}
+		v.Peer = append(v.Peer[:j], v.Peer[:j+1]...)
+	}
 }
 
 func (v *View) Recv(buf Buffer) {
