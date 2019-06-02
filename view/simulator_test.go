@@ -3,17 +3,16 @@ package view
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"testing"
-
-	"github.com/kr/pretty"
 )
 
 const (
-	rounds    = 4
-	peers     = 3
-	failure   = 0.01
-	slow      = 0.05
-	mortality = 0.01
+	rounds    = 3000
+	peers     = 300
+	failure   = 0.00
+	slow      = 0.00
+	mortality = 0.00
 )
 
 type nodes map[string]*View
@@ -27,8 +26,8 @@ func testPush(v *View, ns nodes) {
 		if peer, ok := ns[p.Addr]; ok {
 			peer.Select(b)
 
-			// if p.Addr == "n0" {
-			// 	pretty.Log(peer.Peer)
+			// if v.Addr == "n0" && p.Addr != "n0" {
+			// 	pretty.Log("push to", b, "ended at", peer.Peer)
 			// }
 		}
 	}
@@ -44,23 +43,20 @@ func testKill(v *View, ns nodes) bool {
 
 func TestSimulation(t *testing.T) {
 	nodes := make(nodes)
-	node := NewView("n0", "n0")
-	nodes["n0"] = &node
+	// rand.Seed(42)
+
+	boot := []string{"n0", "n1", "n2", "n3"}
 
 	// init
-	for i := 1; i < peers; i++ {
+	for i := 0; i < peers; i++ {
 		addr := fmt.Sprintf("n%d", i)
-		node = NewView(addr, "n0")
+		node := NewView(addr, boot[i%4])
 		nodes[addr] = &node
 	}
 
 	// run
 	for i := 0; i < rounds; i++ {
 		for _, p := range nodes {
-			// if p.Addr == "n0" {
-			// 	pretty.Log("ROUND", p)
-			// }
-
 			if testKill(p, nodes) {
 				continue
 			}
@@ -68,5 +64,25 @@ func TestSimulation(t *testing.T) {
 		}
 	}
 
-	pretty.Log(nodes)
+	// report OutDegree
+	size := make(map[int]int)
+	for _, p := range nodes {
+		s := len(p.Peer)
+		size[s] = size[s] + 1
+	}
+	ks := make([]int, 0)
+	for k, _ := range size {
+		ks = append(ks, k)
+	}
+	sort.Ints(ks)
+	for _, k := range ks {
+		fmt.Printf("%02d => %d\n", k, size[k])
+	}
+
+	// report InDegree
+	// indeg := make(map[int]int)
+	// for _, p := range nodes {
+	// 	s := len(p.Peer)
+	// 	size[s] = size[s] + 1
+	// }
 }
