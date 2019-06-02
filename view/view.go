@@ -30,7 +30,6 @@ func (m *Message) Equal(n Message) bool {
 func (m *Message) Older(n Message) bool {
 	age := n.Age
 	if age > 0 {
-
 		age += (n.InDegree * 1 / age)
 	} else {
 		age += n.InDegree
@@ -129,8 +128,10 @@ func (v *View) rmOld() {
 }
 
 func (v *View) rmHead() {
-	count := Max(Swap, len(v.Peer)-Size)
-	v.Peer = v.Peer[:count+1]
+	count := Min(Swap, len(v.Peer)-Size)
+	if count > 0 {
+		v.Peer = v.Peer[:count+1]
+	}
 }
 
 func (v *View) rmRand() {
