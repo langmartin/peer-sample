@@ -28,14 +28,15 @@ func (m *Message) Equal(n Message) bool {
 // Older checks age, adjusted by InDegree. As age grows, indegree has a smaller impact on
 // the assumption that it has become less accurate
 func (m *Message) Older(n Message) bool {
-	age := n.Age
-	if age > 0 {
-		age += (n.InDegree * 1 / age)
-	} else {
-		age += n.InDegree
-	}
+	// calculate m's age
+	am := m.Age
+	am += m.InDegree * (1 / Max(1, am))
 
-	if m.Age > age {
+	// and n's age
+	an := n.Age
+	an += n.InDegree * (1 / Max(1, an))
+
+	if am > an {
 		return true
 	}
 	return false
@@ -106,7 +107,7 @@ func (v *View) rmDuplicates() {
 
 	for i, m := range v.Peer {
 		if n, ok := seen[m.Addr]; ok {
-			if m.Older(n) {
+			if m.Equal(n) || m.Older(n) {
 				rm = append(rm, i) // rm m
 				seen[m.Addr] = n
 			}
