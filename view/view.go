@@ -26,18 +26,18 @@ func (m *Message) Equal(n Message) bool {
 		m.OutDegree == n.OutDegree
 }
 
-// age calculates the node age,  adjusted by InDegree. As age grows, indegree has a smaller impact on
-// the assumption that it has become less accurate
-func (m *Message) age() int {
-	a := m.Age
-	a = a + m.InDegree*(1/Max(1, m.Age))
-	a = a - m.OutDegree*(1/Max(1, m.Age))
-	return a
+// age calculates the node age, adjusted by degree
+func (m *Message) age(c int) int {
+	// OutDegree has max Size, because of window truncation. If it's much smaller than
+	// Size, we want to contribute a decaying factor that keeps the node younger
+	// C/out * 1/age
+	o := c / (Max(m.OutDegree, 1) * Max(m.Age, 1))
+	return m.Age - o
 }
 
 // Older compares nodes by age()
-func (m *Message) Older(n Message) bool {
-	return m.age() > n.age()
+func (m *Message) Older(c int, n Message) bool {
+	return m.age(c) > n.age(c)
 }
 
 // ======================================================================
@@ -75,7 +75,7 @@ func (v *View) rmMaxAge() *Message {
 	max := v.Peer[0]
 	idx := 0
 	for i := 1; i < len(v.Peer); i++ {
-		if !max.Older(*v.Peer[i]) {
+		if !max.Older(v.Size, *v.Peer[i]) {
 			max = v.Peer[i]
 			idx = i
 		}
@@ -108,7 +108,7 @@ func (v *View) rmDuplicates() {
 	out := make(Buffer, 0)
 	for _, m := range v.Peer {
 		if n, ok := seen[m.Addr]; ok {
-			if m.Equal(*n) || m.Older(*n) {
+			if m.Equal(*n) || m.Older(v.Size, *n) {
 				seen[m.Addr] = n
 			} else {
 				out = append(out, m)
