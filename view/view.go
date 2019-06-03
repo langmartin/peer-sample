@@ -11,35 +11,33 @@ const (
 )
 
 type Message struct {
-	Addr     string
-	Age      int
-	InDegree int
+	Addr      string
+	Age       int
+	InDegree  int
+	OutDegree int
 }
 
 type Buffer []*Message
 
 func (m *Message) Equal(n Message) bool {
-	if m.Addr == n.Addr && m.Age == n.Age && m.InDegree == n.InDegree {
-		return true
-	}
-	return false
+	return m.Addr == n.Addr &&
+		m.Age == n.Age &&
+		m.InDegree == n.InDegree &&
+		m.OutDegree == n.OutDegree
 }
 
-// Older checks age, adjusted by InDegree. As age grows, indegree has a smaller impact on
+// age calculates the node age,  adjusted by InDegree. As age grows, indegree has a smaller impact on
 // the assumption that it has become less accurate
+func (m *Message) age() int {
+	a := m.Age
+	a = a + m.InDegree*(1/Max(1, m.Age))
+	a = a - m.OutDegree*(1/Max(1, m.Age))
+	return a
+}
+
+// Older compares nodes by age()
 func (m *Message) Older(n Message) bool {
-	// calculate m's age
-	am := m.Age
-	am += m.InDegree * (1 / Max(1, am))
-
-	// and n's age
-	an := n.Age
-	an += n.InDegree * (1 / Max(1, an))
-
-	if am > an {
-		return true
-	}
-	return false
+	return m.age() > n.age()
 }
 
 // ======================================================================
@@ -56,7 +54,7 @@ type View struct {
 
 func NewView(addr string, seed string) View {
 	return View{Size, Heal, Swap, addr, 0, Buffer{
-		&Message{seed, 0, 0},
+		&Message{seed, 0, 0, 1},
 	}}
 }
 
@@ -162,7 +160,7 @@ func (v *View) Select(buf Buffer) {
 // ========================================================================
 
 func (v *View) Push() Buffer {
-	b := Buffer{&Message{v.Addr, 0, v.InDegree}}
+	b := Buffer{{v.Addr, 0, v.InDegree, len(v.Peer)}}
 	v.Permute()
 	v.AgeOut()
 	count := Min(v.Size/2-1, len(v.Peer))
