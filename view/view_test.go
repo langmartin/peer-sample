@@ -18,19 +18,19 @@ func TestMessageEqual(t *testing.T) {
 
 func TestMessageOlder(t *testing.T) {
 	// by age
-	m := Message{"foo", 1, 0, 0}
-	n := Message{"foo", 0, 0, 0}
-	require.True(t, m.Older(n))
+	// m := Message{"foo", 1, 0, 0}
+	// n := Message{"foo", 0, 0, 0}
+	// require.True(t, m.Older(10, n))
 
-	// by indegree
-	m = Message{"foo", 0, 1, 0}
-	n = Message{"foo", 0, 0, 0}
-	require.True(t, m.Older(n))
+	// // by outdegree
+	// m = Message{"foo", 0, 0, 10}
+	// n = Message{"foo", 0, 0, 2}
+	// require.True(t, m.Older(10, n))
 
-	// by indegree with positive age
-	m = Message{"foo", 1, 1, 0}
-	n = Message{"foo", 1, 0, 0}
-	require.True(t, m.Older(n))
+	// by outdegree with positive age
+	m := Message{"foo", 6, 0, 2}
+	n := Message{"foo", 0, 0, 10}
+	require.True(t, m.Older(10, n))
 }
 
 func testNode(count int) View {
@@ -68,14 +68,14 @@ func TestSelect(t *testing.T) {
 	n0 := NewView("n0", "n0")
 	n1 := NewView("n1", "n1")
 
-	require.Equal(t, Buffer{{"n1", 0, 0, 0}}, n1.Peer)
+	require.Equal(t, Buffer{{"n1", 0, 0, 1}}, n1.Peer)
 
 	b := n0.Push()
 	n1.Select(b)
 
 	require.Equal(t, Buffer{
-		{"n1", 1, 0, 0},
-		{"n0", 1, 0, 0},
+		{"n1", 1, 0, 1},
+		{"n0", 1, 0, 1},
 	},
 		n1.Peer)
 }
@@ -83,13 +83,13 @@ func TestSelect(t *testing.T) {
 func Test_rmDuplicates(t *testing.T) {
 	// dedup exact
 	n0 := NewView("n0", "n1")
-	n0.Peer = append(n0.Peer, &Message{"n1", 0, 0, 0})
+	n0.Peer = append(n0.Peer, &Message{"n1", 0, 0, 1})
 	n0.rmDuplicates()
-	require.Equal(t, Buffer{{"n1", 0, 0, 0}}, n0.Peer)
+	require.Equal(t, Buffer{{"n1", 0, 0, 1}}, n0.Peer)
 
 	// dedup older
 	n0 = NewView("n0", "n1")
 	n0.Peer = append(n0.Peer, &Message{"n1", 1, 0, 0})
 	n0.rmDuplicates()
-	require.Equal(t, Buffer{{"n1", 0, 0, 0}}, n0.Peer)
+	require.Equal(t, Buffer{{"n1", 0, 0, 1}}, n0.Peer)
 }
