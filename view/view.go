@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	Size = 10 // C
-	Heal = 1  // H
-	Swap = 1  // S
+	Size = 20 // C
+	Heal = 3  // H
+	Swap = 3  // S
 )
 
 type Message struct {
@@ -27,12 +27,17 @@ func (m *Message) Equal(n Message) bool {
 }
 
 // age calculates the node age, adjusted by degree
-func (m *Message) age(c int) int {
+func (m *Message) ageOutDegree(c int) int {
 	// OutDegree has max Size, because of window truncation. If it's much smaller than
 	// Size, we want to contribute a decaying factor that keeps the node younger
 	// C/out * 1/age
 	o := c / (Max(m.OutDegree, 1) * Max(m.Age, 1))
 	return m.Age - o
+}
+
+func (m *Message) age(c int) int {
+	// return m.ageOutDegree(c)
+	return m.Age
 }
 
 // Older compares nodes by age()
@@ -72,6 +77,9 @@ func (v *View) Permute() {
 
 // rmMaxAge removes the oldest message in view, using Older
 func (v *View) rmMaxAge() *Message {
+	if len(v.Peer) < 1 {
+		return nil
+	}
 	max := v.Peer[0]
 	idx := 0
 	for i := 1; i < len(v.Peer); i++ {
@@ -89,9 +97,14 @@ func (v *View) rmMaxAge() *Message {
 
 // AgeOut moves the oldest Heal to the end of the window
 func (v *View) AgeOut() {
-	b := make(Buffer, v.Heal)
+	b := make(Buffer, 0)
+	var m *Message
+
 	for i := 0; i < v.Heal; i++ {
-		b[i] = v.rmMaxAge()
+		m = v.rmMaxAge()
+		if m != nil {
+			b = append(b, m)
+		}
 	}
 	v.Peer = append(v.Peer, b...)
 }
