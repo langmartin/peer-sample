@@ -3,40 +3,26 @@ package view
 import (
 	"fmt"
 	"math/rand"
-	"sort"
 	"testing"
 )
 
 const (
-	rounds    = 60
-	peers     = 3000
-	failure   = 0.00
-	replyFail = 0.00
-	slow      = 0.00
-	mortality = 0.00
+	rounds    = 100
+	peers     = 10000
+	failure   = 0.10
+	replyFail = 0.10
+	slow      = 0.00 // not implemented
+	mortality = 0.10 // per test
 )
 
-type hist map[int]int
-
-func fmtHist(h hist) {
-	ks := make([]int, 0)
-	for k, _ := range h {
-		ks = append(ks, k)
-	}
-	sort.Ints(ks)
-	for _, k := range ks {
-		fmt.Printf("%02d => %d\n", k, h[k])
-	}
-}
-
 type nodes map[string]*View
+type morgue = map[string]int
 
 // testPush implements the push only algorithm
 func testPush(v *View, ns nodes) {
 	p := v.SelectPeer()
 	b := v.Push()
 	if rand.Float32() > failure {
-		// might be dead & therefore missing
 		if peer, ok := ns[p.Addr]; ok {
 			peer.Select(b)
 		}
@@ -47,21 +33,22 @@ func testPush(v *View, ns nodes) {
 func testPushPull(v *View, ns nodes) {
 	p := v.SelectPeer()
 	b := v.Push()
-	if rand.Float32() > failure {
-		// might be dead & therefore missing
+	if rand.Float32() < failure {
 		if peer, ok := ns[p.Addr]; ok {
 			peer.Select(b)
 			r := peer.Push()
-			if rand.Float32() > replyFail {
+			if rand.Float32() < replyFail {
 				v.Select(r)
 			}
 		}
 	}
 }
 
-func testKill(v *View, ns nodes) bool {
-	if rand.Float32() < mortality {
+func testKill(v *View, ns nodes, morgue morgue, time int) bool {
+	mort := mortality / rounds
+	if rand.Float64() < mort {
 		delete(ns, v.Addr)
+		morgue[v.Addr] = time
 		return true
 	}
 	return false
@@ -69,32 +56,30 @@ func testKill(v *View, ns nodes) bool {
 
 func TestSimulation(t *testing.T) {
 	nodes := make(nodes)
-	rand.Seed(42)
+	morgue := make(morgue)
+	// rand.Seed(427)
 
 	boot := []string{"n0", "n1", "n2", "n3"}
 
 	// init
 	for i := 0; i < peers; i++ {
 		addr := fmt.Sprintf("n%d", i)
-		node := NewView(addr, boot[i%4])
+		node := NewView(addr, boot[i%len(boot)])
 		nodes[addr] = &node
 	}
 
 	// run
 	for i := 0; i < rounds; i++ {
 		for _, p := range nodes {
-			if testKill(p, nodes) {
+			if testKill(p, nodes, morgue, i) {
 				continue
 			}
 			testPushPull(p, nodes)
 		}
 	}
 
-	// report OutDegree
-	size := make(hist)
-	for _, p := range nodes {
-		s := len(p.Peer)
-		size[s] = size[s] + 1
-	}
-	fmtHist(size)
+	// report
+	fmt.Printf("alive: %d, dead: %d\n", len(nodes), len(morgue))
+	fmtHist(rptOut(nodes))
+	fmtHist(rptIn(nodes))
 }
