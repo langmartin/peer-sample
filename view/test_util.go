@@ -69,5 +69,49 @@ func rptIn(nodes nodes) hist {
 	for _, c := range in {
 		h[c] = h[c] + 1
 	}
+	h[0] = len(nodes) - len(in)
+
+	// // print zero nodes
+	// if h[0] > 0 {
+	// 	for n, _ := range nodes {
+	// 		if _, ok := in[n]; !ok {
+	// 			fmt.Printf("zero indegree %s\n", n)
+	// 		}
+	// 	}
+	// }
+
 	return h
+}
+
+// isPartitioned does a DFS of the graph of nodes to ensure that all nodes are connected
+func isPartitioned(nodes nodes) bool {
+	seen := make(map[string]bool)
+	var lp func(string)
+	lp = func(n string) {
+		if _, ok := seen[n]; ok {
+			return
+		}
+
+		// someone has a dead node still in view, which is fine
+		if _, ok := nodes[n]; !ok {
+			return
+		}
+
+		seen[n] = true
+		for _, m := range nodes[n].Peer {
+			lp(m.Addr)
+		}
+	}
+
+	// populate seen
+	lp("n0")
+
+	for n, _ := range nodes {
+		if _, ok := seen[n]; !ok {
+			fmt.Printf("partition found %d\n", len(seen))
+			return true
+		}
+	}
+
+	return false
 }
