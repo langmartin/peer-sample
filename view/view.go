@@ -1,14 +1,26 @@
 package view
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 )
 
 const (
-	Size = 20 // C
-	Heal = 3  // H
-	Swap = 3  // S
+	Size = 30 // C
+	Heal = 6  // H
+	Swap = 20 // S
 )
+
+func rint(n int) int {
+	// crypto/rand
+	bn := new(big.Int).SetInt64(int64(n))
+	bi, _ := rand.Int(rand.Reader, bn)
+	i := int(bi.Int64())
+	return i
+
+	// math/rand
+	// return rand.Intn(n)
+}
 
 type Message struct {
 	Addr      string
@@ -64,15 +76,17 @@ func NewView(addr string, seed string) View {
 }
 
 func (v *View) SelectPeer() *Message {
-	i := rand.Intn(len(v.Peer))
+	i := rint(len(v.Peer))
 	return v.Peer[i]
 }
 
 // Permute shuffles the peer view window
 func (v *View) Permute() {
-	rand.Shuffle(len(v.Peer), func(i, j int) {
+	l := len(v.Peer)
+	for i := l - 1; i > 0; i-- {
+		j := rint(l)
 		v.Peer[i], v.Peer[j] = v.Peer[j], v.Peer[i]
-	})
+	}
 }
 
 // rmMaxAge removes the oldest message in view, using Older
@@ -152,7 +166,7 @@ func (v *View) rmRand() {
 	count := len(v.Peer) - v.Size
 	seen := make(map[int]bool)
 	for i := 0; i < count; i++ {
-		j := rand.Int()
+		j := rint(count)
 		if _, ok := seen[j]; ok {
 			continue
 		}
