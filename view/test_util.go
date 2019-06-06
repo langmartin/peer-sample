@@ -53,7 +53,7 @@ func rptOut(nodes nodes) hist {
 	return size
 }
 
-func indeg(nodes nodes) map[string]int {
+func countInDegree(nodes nodes) map[string]int {
 	in := make(map[string]int)
 	for _, p := range nodes {
 		for _, m := range p.Peer {
@@ -63,13 +63,12 @@ func indeg(nodes nodes) map[string]int {
 	return in
 }
 
-func rptIn(nodes nodes) hist {
-	in := indeg(nodes)
+func rptIn(nodes nodes, indeg map[string]int) hist {
 	h := make(hist)
-	for _, c := range in {
+	for _, c := range indeg {
 		h[c] = h[c] + 1
 	}
-	h[0] = len(nodes) - len(in)
+	h[0] = Max(len(nodes)-len(indeg), 0)
 
 	// // print zero nodes
 	// if h[0] > 0 {
@@ -108,10 +107,29 @@ func isPartitioned(nodes nodes) bool {
 
 	for n, _ := range nodes {
 		if _, ok := seen[n]; !ok {
-			fmt.Printf("partition found %d\n", len(seen))
+			fmt.Printf("partition found %d, missed %d\n",
+				len(seen),
+				len(nodes)-len(seen))
 			return true
 		}
 	}
 
 	return false
 }
+
+/*
+func diameter(nodes nodes, indeg map[string]int) int {
+	seen := make(map[string]bool)
+	l := len(nodes)
+	var lp func(string)
+	lp = func(n string) {
+		if _, ok := seen[n]; ok {
+			return
+		}
+		// u := nodes[rint(l)]
+		seen[u.Addr] = true
+	}
+
+	return 42
+}
+*/
