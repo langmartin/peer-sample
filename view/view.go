@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	Size = 30 // C
-	Heal = 6  // H
-	Swap = 20 // S
+	Size        = 20 // C
+	Heal        = 3  // H
+	Swap        = 8  // S
+	InDegreeTTL = 5
 )
 
 func rint(n int) int {
@@ -34,7 +35,6 @@ type Buffer []*Message
 func (m *Message) Equal(n Message) bool {
 	return m.Addr == n.Addr &&
 		m.Age == n.Age &&
-		m.InDegree == n.InDegree &&
 		m.OutDegree == n.OutDegree
 }
 
@@ -47,9 +47,22 @@ func (m *Message) ageOutDegree(c int) int {
 	return m.Age - o
 }
 
+func (m *Message) ageInDegree(c int) int {
+	// InDegree may be very large, in which case we want to be older
+	// InDegree may be small, in which case we want to be younger
+	// the effect shrinks with age
+	if m.InDegree > c {
+		return m.Age + 8
+	} else if m.InDegree < c {
+		return m.Age - 8
+	}
+	return m.Age
+}
+
 func (m *Message) age(c int) int {
 	// return m.ageOutDegree(c)
-	return m.Age
+	return m.ageInDegree(c)
+	// return m.Age
 }
 
 // Older compares nodes by age()
@@ -59,20 +72,32 @@ func (m *Message) Older(c int, n Message) bool {
 
 // ======================================================================
 
+type LastSeen map[string]int
+
 // View holds my own address and InDegree estimate, and the peer window
 type View struct {
-	Size     int
-	Heal     int
-	Swap     int
+	// Local constants
+	Size        int
+	Heal        int
+	Swap        int
+	InDegreeTTL int
+
+	// Real properties
 	Addr     string
-	InDegree int
 	Peer     Buffer
+	InDegree LastSeen
 }
 
 func NewView(addr string, seed string) View {
-	return View{Size, Heal, Swap, addr, 0, Buffer{
-		&Message{seed, 0, 0, 1},
-	}}
+	return View{
+		Size:        Size,
+		Heal:        Heal,
+		Swap:        Swap,
+		InDegreeTTL: InDegreeTTL,
+		Addr:        addr,
+		Peer:        Buffer{{seed, Size, Size, 1}},
+		InDegree:    make(LastSeen, 0),
+	}
 }
 
 func (v *View) SelectPeer() *Message {
@@ -129,6 +154,18 @@ func (v *View) increaseAge() {
 	}
 }
 
+// Estimate my inDegree by aging a list peers that have pushed to me
+func (v *View) ageInDegree(peer Message) {
+	for k, t := range v.InDegree {
+		if t > v.InDegreeTTL {
+			delete(v.InDegree, k)
+		} else {
+			v.InDegree[k] = t + 1
+		}
+	}
+	v.InDegree[peer.Addr] = 0
+}
+
 // rmDuplicates keeps only the newest message for each peer
 func (v *View) rmDuplicates() {
 	seen := make(map[string]*Message)
@@ -182,12 +219,13 @@ func (v *View) Select(buf Buffer) {
 	v.rmHead()
 	v.rmRand()
 	v.increaseAge()
+
 }
 
 // ========================================================================
 
 func (v *View) Push() Buffer {
-	b := Buffer{{v.Addr, 0, v.InDegree, len(v.Peer)}}
+	b := Buffer{{v.Addr, 0, len(v.InDegree), len(v.Peer)}}
 	v.Permute()
 	v.AgeOut()
 	count := Min(v.Size/2-1, len(v.Peer))
@@ -196,4 +234,9 @@ func (v *View) Push() Buffer {
 	}
 	v.increaseAge()
 	return b
+}
+
+func (v *View) Receive(buf Buffer) {
+	v.Select(buf)
+	v.ageInDegree(*buf[0])
 }

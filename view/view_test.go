@@ -16,6 +16,20 @@ func TestMessageEqual(t *testing.T) {
 	}
 }
 
+func TestMessage_ageInDegree(t *testing.T) {
+	// no effect
+	m := Message{"foo", 1, 10, 0}
+	require.Equal(t, 1, m.ageInDegree(8))
+
+	// too big
+	m = Message{"foo", 1, 30, 0}
+	require.Equal(t, 2, m.ageInDegree(8))
+
+	// too small
+	m = Message{"foo", 1, 2, 0}
+	require.Equal(t, 0, m.ageInDegree(8))
+}
+
 func TestMessageOlder(t *testing.T) {
 	// by age
 	// m := Message{"foo", 1, 0, 0}
