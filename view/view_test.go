@@ -75,7 +75,7 @@ func TestPush(t *testing.T) {
 		{Addr: "n0", Age: 1, InDegree: 0, OutDegree: 0},
 		{Addr: "n25", Age: 1, InDegree: 0, OutDegree: 0},
 	},
-		v.Push())
+		v.Push("n31"))
 }
 
 func TestSelect(t *testing.T) {
@@ -84,7 +84,7 @@ func TestSelect(t *testing.T) {
 
 	require.Equal(t, Buffer{{"n1", 0, 0, 1}}, n1.Peer)
 
-	b := n0.Push()
+	b := n0.Push("n1")
 	n1.Select(b)
 
 	require.Equal(t, Buffer{

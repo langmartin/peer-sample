@@ -11,10 +11,10 @@ import (
 const (
 	rounds    = 45
 	peers     = 10250
-	failure   = 0.00
+	failure   = 0.10
 	replyFail = 0.00
 	slow      = 0.00 // not implemented
-	mortality = 0.00 // per test
+	mortality = 0.10 // per test
 )
 
 type nodes map[string]*View
@@ -23,7 +23,7 @@ type morgue = map[string]int
 // testPush implements the push only algorithm
 func testPush(v *View, ns nodes) {
 	p := v.SelectPeer()
-	b := v.Push()
+	b := v.Push(p.Addr)
 	if rand.Float32() > failure {
 		if peer, ok := ns[p.Addr]; ok {
 			peer.Select(b)
@@ -34,11 +34,11 @@ func testPush(v *View, ns nodes) {
 // testPushPull implements the push + pull algorithm
 func testPushPull(v *View, ns nodes) {
 	p := v.SelectPeer()
-	b := v.Push()
+	b := v.Push(p.Addr)
 	if rand.Float32() > failure {
 		if peer, ok := ns[p.Addr]; ok {
 			peer.Receive(b)
-			r := peer.Push()
+			r := peer.Push(v.Addr)
 			if rand.Float32() > replyFail {
 				v.Select(r)
 			}
