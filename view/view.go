@@ -225,12 +225,16 @@ func (v *View) Select(buf Buffer) {
 
 // ========================================================================
 
-func (v *View) Push() Buffer {
+func (v *View) Push(peerAddr string) Buffer {
 	b := Buffer{{v.Addr, 0, len(v.InDegree), len(v.Peer)}}
 	v.Permute()
 	v.AgeOut()
 	count := Min(v.Size/2-1, len(v.Peer))
 	for i := 0; i < count; i++ {
+		// Don't send a peer its own record
+		if v.Peer[i].Addr == peerAddr {
+			continue
+		}
 		b = append(b, v.Peer[i])
 	}
 	v.increaseAge()
