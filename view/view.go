@@ -35,6 +35,7 @@ type Buffer []*Message
 func (m *Message) Equal(n Message) bool {
 	return m.Addr == n.Addr &&
 		m.Age == n.Age &&
+		m.InDegree == n.InDegree &&
 		m.OutDegree == n.OutDegree
 }
 
@@ -52,17 +53,17 @@ func (m *Message) ageInDegree(c int) int {
 	// InDegree may be small, in which case we want to be younger
 	// the effect shrinks with age
 	if m.InDegree > c {
-		return m.Age + 8
+		return m.Age + 1
 	} else if m.InDegree < c {
-		return m.Age - 8
+		return m.Age - 1
 	}
 	return m.Age
 }
 
 func (m *Message) age(c int) int {
 	// return m.ageOutDegree(c)
-	return m.ageInDegree(c)
-	// return m.Age
+	// return m.ageInDegree(c)
+	return m.Age
 }
 
 // Older compares nodes by age()
@@ -95,7 +96,7 @@ func NewView(addr string, seed string) View {
 		Swap:        Swap,
 		InDegreeTTL: InDegreeTTL,
 		Addr:        addr,
-		Peer:        Buffer{{seed, Size, Size, 1}},
+		Peer:        Buffer{{Addr: seed, Age: 0, InDegree: 0, OutDegree: 1}},
 		InDegree:    make(LastSeen, 0),
 	}
 }
