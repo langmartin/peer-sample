@@ -1,27 +1,42 @@
 package view
 
 import (
-	"crypto/rand"
+	cr "crypto/rand"
 	"math/big"
+	"math/rand"
 )
+
+// ======================================================================
 
 const (
 	Size        = 20 // C
 	Heal        = 3  // H
 	Swap        = 8  // S
 	InDegreeTTL = 5
+	InDegreeAge = 1
 )
 
-func rint(n int) int {
-	// crypto/rand
-	bn := new(big.Int).SetInt64(int64(n))
-	bi, _ := rand.Int(rand.Reader, bn)
-	i := int(bi.Int64())
-	return i
-
-	// math/rand
-	// return rand.Intn(n)
+type Config struct {
+	Size        int
+	Heal        int
+	Swap        int
+	InDegreeTTL int
+	InDegreeAge int
+	CryptoRand  bool
 }
+
+func (c *Config) rint(n int) int {
+	if c.CryptoRand {
+		bn := new(big.Int).SetInt64(int64(n))
+		bi, _ := cr.Int(cr.Reader, bn)
+		i := int(bi.Int64())
+		return i
+	}
+	// math/rand
+	return rand.Intn(n)
+}
+
+// ======================================================================
 
 type Message struct {
 	Addr      string
@@ -40,34 +55,34 @@ func (m *Message) Equal(n Message) bool {
 }
 
 // age calculates the node age, adjusted by degree
-func (m *Message) ageOutDegree(c int) int {
+func (m *Message) ageOutDegree(c Config) int {
 	// OutDegree has max Size, because of window truncation. If it's much smaller than
 	// Size, we want to contribute a decaying factor that keeps the node younger
 	// C/out * 1/age
-	o := c / (Max(m.OutDegree, 1) * Max(m.Age, 1))
+	o := c.Size / (Max(m.OutDegree, 1) * Max(m.Age, 1))
 	return m.Age - o
 }
 
-func (m *Message) ageInDegree(c int) int {
+func (m *Message) ageInDegree(c Config) int {
 	// InDegree may be very large, in which case we want to be older
 	// InDegree may be small, in which case we want to be younger
 	// the effect shrinks with age
-	if m.InDegree > c {
-		return m.Age + 1
-	} else if m.InDegree < c {
-		return m.Age - 1
+	if m.InDegree > c.Size {
+		return m.Age + c.InDegreeAge
+	} else if m.InDegree < c.Size {
+		return m.Age - c.InDegreeAge
 	}
 	return m.Age
 }
 
-func (m *Message) age(c int) int {
+func (m *Message) age(c Config) int {
 	// return m.ageOutDegree(c)
 	// return m.ageInDegree(c)
 	return m.Age
 }
 
 // Older compares nodes by age()
-func (m *Message) Older(c int, n Message) bool {
+func (m *Message) Older(c Config, n Message) bool {
 	return m.age(c) > n.age(c)
 }
 
@@ -77,13 +92,7 @@ type LastSeen map[string]int
 
 // View holds my own address and InDegree estimate, and the peer window
 type View struct {
-	// Local constants
-	Size        int
-	Heal        int
-	Swap        int
-	InDegreeTTL int
-
-	// Real properties
+	Config
 	Addr     string
 	Peer     Buffer
 	InDegree LastSeen
@@ -91,39 +100,46 @@ type View struct {
 
 func NewView(addr string, seed string) View {
 	return View{
-		Size:        Size,
-		Heal:        Heal,
-		Swap:        Swap,
-		InDegreeTTL: InDegreeTTL,
-		Addr:        addr,
-		Peer:        Buffer{{Addr: seed, Age: 0, InDegree: 0, OutDegree: 1}},
-		InDegree:    make(LastSeen, 0),
+		Config: Config{
+			Size:        Size,
+			Heal:        Heal,
+			Swap:        Swap,
+			InDegreeTTL: InDegreeTTL,
+			InDegreeAge: InDegreeAge,
+			CryptoRand:  true,
+		},
+		Addr:     addr,
+		Peer:     Buffer{{Addr: seed, Age: 0, InDegree: 0, OutDegree: 1}},
+		InDegree: make(LastSeen, 0),
 	}
 }
 
 func (v *View) SelectPeer() *Message {
-	i := rint(len(v.Peer))
+	c := v.Config
+	i := c.rint(len(v.Peer))
 	return v.Peer[i]
 }
 
 // Permute shuffles the peer view window
 func (v *View) Permute() {
+	c := v.Config
 	l := len(v.Peer)
 	for i := l - 1; i > 0; i-- {
-		j := rint(l)
+		j := c.rint(l)
 		v.Peer[i], v.Peer[j] = v.Peer[j], v.Peer[i]
 	}
 }
 
 // rmMaxAge removes the oldest message in view, using Older
 func (v *View) rmMaxAge() *Message {
+	c := v.Config
 	if len(v.Peer) < 1 {
 		return nil
 	}
 	max := v.Peer[0]
 	idx := 0
 	for i := 1; i < len(v.Peer); i++ {
-		if !max.Older(v.Size, *v.Peer[i]) {
+		if !max.Older(c, *v.Peer[i]) {
 			max = v.Peer[i]
 			idx = i
 		}
@@ -169,11 +185,12 @@ func (v *View) ageInDegree(peer Message) {
 
 // rmDuplicates keeps only the newest message for each peer
 func (v *View) rmDuplicates() {
+	c := v.Config
 	seen := make(map[string]*Message)
 	out := make(Buffer, 0)
 	for _, m := range v.Peer {
 		if n, ok := seen[m.Addr]; ok {
-			if m.Equal(*n) || m.Older(v.Size, *n) {
+			if m.Equal(*n) || m.Older(c, *n) {
 				seen[m.Addr] = n
 			} else {
 				out = append(out, m)
@@ -201,10 +218,11 @@ func (v *View) rmHead() {
 }
 
 func (v *View) rmRand() {
+	c := v.Config
 	count := len(v.Peer) - v.Size
 	seen := make(map[int]bool)
 	for i := 0; i < count; i++ {
-		j := rint(count)
+		j := c.rint(count)
 		if _, ok := seen[j]; ok {
 			continue
 		}
