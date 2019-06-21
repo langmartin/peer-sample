@@ -2,6 +2,7 @@ package view
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sort"
 )
@@ -32,8 +33,15 @@ func avgHist(h hist) avgs {
 		count = count + c
 		total = total + v*c
 	}
-	std := 0.1
-	return avgs{total / count, std}
+	mean := total / count
+
+	var std float64
+	for v, c := range h {
+		std += math.Pow(float64(v-mean), 2.0) * float64(c)
+	}
+	std = math.Sqrt(std / float64(total))
+
+	return avgs{mean, std}
 }
 
 func fmtR(file string, xss [][]int) {
