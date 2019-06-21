@@ -115,8 +115,9 @@ func NewView(addr string, seed string) View {
 }
 
 func (v *View) SelectPeer() *Message {
-	c := v.Config
-	i := c.rint(len(v.Peer))
+	// c := v.Config
+	// i := c.rint(len(v.Peer))
+	i := v.MaxAge()
 	return v.Peer[i]
 }
 
