@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	rounds    = 45
+	rounds    = 40
 	peers     = 10250
 	failure   = 0.00
 	replyFail = 0.00
@@ -63,8 +63,8 @@ func testKill(v *View, ns nodes, morgue morgue, time int) bool {
 func testRun(rounds int, peerI int, peerJ int, nodes nodes, morgue morgue) {
 	c := Config{
 		Size:        24,
-		Heal:        8,
-		Swap:        8,
+		Heal:        12,
+		Swap:        3,
 		InDegreeTTL: 3,
 		InDegreeAge: 1,
 		CryptoRand:  false,
@@ -73,7 +73,8 @@ func testRun(rounds int, peerI int, peerJ int, nodes nodes, morgue morgue) {
 	// init
 	for i := peerI; i < peerJ; i++ {
 		addr := fmt.Sprintf("n%d", i)
-		boot := fmt.Sprintf("n%d", c.rint(Max(i, 1)))
+		// boot := fmt.Sprintf("n%d", c.rint(Max(i, 1)))
+		boot := "n0"
 		node := NewView(addr, boot)
 		node.Size = c.Size
 		node.Heal = c.Heal
