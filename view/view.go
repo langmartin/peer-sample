@@ -77,8 +77,8 @@ func (m *Message) ageInDegree(c Config) int {
 
 func (m *Message) age(c Config) int {
 	// return m.ageOutDegree(c)
-	// return m.ageInDegree(c)
-	return m.Age
+	return m.ageInDegree(c)
+	// return m.Age
 }
 
 // Older compares nodes by age()
