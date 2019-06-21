@@ -131,11 +131,11 @@ func (v *View) Permute() {
 	}
 }
 
-// rmMaxAge removes the oldest message in view, using Older
-func (v *View) rmMaxAge() *Message {
+// MaxAge finds the index of the oldest peer
+func (v *View) MaxAge() int {
 	c := v.Config
 	if len(v.Peer) < 1 {
-		return nil
+		return -1
 	}
 	max := v.Peer[0]
 	idx := 0
@@ -145,11 +145,18 @@ func (v *View) rmMaxAge() *Message {
 			idx = i
 		}
 	}
+	return idx
+}
 
-	// FIXME could return take a list of ids to skip and append at the end? runs Heal
-	// times
-	v.Peer = append(v.Peer[:idx], v.Peer[idx+1:]...)
-	return max
+// rmMaxAge removes the oldest message in view, using Older
+func (v *View) rmMaxAge() *Message {
+	i := v.MaxAge()
+	if i < 0 {
+		return nil
+	}
+	node := v.Peer[i]
+	v.rmPeer(i)
+	return node
 }
 
 // AgeOut moves the oldest Heal to the end of the window
