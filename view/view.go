@@ -239,15 +239,10 @@ func (v *View) rmHead() {
 
 func (v *View) rmRand() {
 	c := v.Config
-	count := len(v.Peer) - v.Size
-	seen := make(map[int]bool)
+	l := len(v.Peer)
+	count := l - v.Size
 	for i := 0; i < count; i++ {
-		j := c.rint(count)
-		if _, ok := seen[j]; ok {
-			continue
-		}
-		seen[j] = true
-		v.rmPeer(j)
+		v.rmPeer(c.rint(l - i))
 	}
 }
 
