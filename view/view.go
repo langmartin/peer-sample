@@ -121,6 +121,10 @@ func (v *View) SelectPeer() *Message {
 	return v.Peer[i]
 }
 
+func (v *View) rmPeer(i int) {
+	v.Peer = append(v.Peer[:i], v.Peer[i+1:]...)
+}
+
 // Permute shuffles the peer view window
 func (v *View) Permute() {
 	c := v.Config
@@ -161,7 +165,7 @@ func (v *View) rmMaxAge() *Message {
 
 // AgeOut moves the oldest Heal to the end of the window
 func (v *View) AgeOut() {
-	b := make(Buffer, 0)
+	b := Buffer{}
 	var m *Message
 
 	for i := 0; i < v.Heal; i++ {
@@ -194,20 +198,28 @@ func (v *View) ageInDegree(peer Message) {
 // rmDuplicates keeps only the newest message for each peer
 func (v *View) rmDuplicates() {
 	c := v.Config
-	seen := make(map[string]*Message)
-	out := make(Buffer, 0)
-	for _, m := range v.Peer {
-		if n, ok := seen[m.Addr]; ok {
-			if m.Equal(*n) || m.Older(c, *n) {
-				seen[m.Addr] = n
-			} else {
-				out = append(out, m)
+
+	// make the list of messages to keep
+	keep := make(map[string]int)
+	for i, m := range v.Peer {
+		if j, ok := keep[m.Addr]; ok {
+			// this test is backwards
+			// m is the new candidate and Peer[j] is current
+			if !m.Older(c, *v.Peer[j]) {
+				keep[m.Addr] = i
 			}
 		} else {
-			seen[m.Addr] = m
+			keep[m.Addr] = i
+		}
+	}
+
+	out := Buffer{}
+	for i, m := range v.Peer {
+		if i == keep[m.Addr] {
 			out = append(out, m)
 		}
 	}
+
 	v.Peer = out
 }
 
