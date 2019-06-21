@@ -226,7 +226,8 @@ func (v *View) rmRand() {
 		if _, ok := seen[j]; ok {
 			continue
 		}
-		v.Peer = append(v.Peer[:j], v.Peer[:j+1]...)
+		seen[j] = true
+		v.rmPeer(j)
 	}
 }
 
