@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,7 +67,7 @@ func testRun(rounds int, peerI int, peerJ int, nodes nodes, morgue morgue) {
 		Heal:        12,
 		Swap:        3,
 		InDegreeTTL: 3,
-		InDegreeAge: 1,
+		InDegreeAge: 0,
 		CryptoRand:  false,
 	}
 
@@ -124,7 +125,9 @@ func TestSimulation(t *testing.T) {
 	fmt.Printf("alive: %d, dead: %d\n", len(nodes), len(morgue))
 	fmtHist(rptOut(nodes))
 
-	fmtHist(rptIn(nodes, indeg))
+	inh := rptIn(nodes, indeg)
+	fmtHist(inh)
+	pretty.Log(avgHist(inh))
 	// diameter(nodes, indeg)
 
 	// test tests
