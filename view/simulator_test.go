@@ -65,6 +65,12 @@ func testRun(rounds int, peerI int, peerJ int, nodes nodes, morgue morgue) {
 	for i := peerI; i < peerJ; i++ {
 		addr := fmt.Sprintf("n%d", i)
 		node := NewView(addr, "n0")
+		node.Size = 30
+		node.Heal = 5
+		node.Swap = 5
+		node.CryptoRand = false
+		node.InDegreeAge = 1
+		node.InDegreeTTL = 3
 		nodes[addr] = &node
 	}
 
@@ -85,11 +91,11 @@ func TestSimulation(t *testing.T) {
 	// rand.Seed(4)
 
 	// batch all the way
-	batch := 120
-	peers := 10200 // divisble by batch
-	for i := 0; i < peers; i += batch {
-		testRun(8, i, i+batch, nodes, morgue)
-	}
+	// batch := 120
+	// peers := 10200 // divisble by batch
+	// for i := 0; i < peers; i += batch {
+	// 	testRun(8, i, i+batch, nodes, morgue)
+	// }
 
 	// bootstrap
 	// one := 120
@@ -100,7 +106,7 @@ func TestSimulation(t *testing.T) {
 	// testRun(rounds, two, three, nodes, morgue)
 
 	// full send
-	// testRun(rounds, 0, peers, nodes, morgue)
+	testRun(rounds, 0, peers, nodes, morgue)
 
 	// report
 	indeg := countInDegree(nodes)
