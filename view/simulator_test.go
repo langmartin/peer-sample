@@ -61,16 +61,26 @@ func testKill(v *View, ns nodes, morgue morgue, time int) bool {
 }
 
 func testRun(rounds int, peerI int, peerJ int, nodes nodes, morgue morgue) {
+	c := Config{
+		Size:        24,
+		Heal:        8,
+		Swap:        8,
+		InDegreeTTL: 3,
+		InDegreeAge: 1,
+		CryptoRand:  false,
+	}
+
 	// init
 	for i := peerI; i < peerJ; i++ {
 		addr := fmt.Sprintf("n%d", i)
-		node := NewView(addr, "n0")
-		node.Size = 30
-		node.Heal = 5
-		node.Swap = 5
-		node.CryptoRand = false
-		node.InDegreeAge = 1
-		node.InDegreeTTL = 3
+		boot := fmt.Sprintf("n%d", c.rint(Max(i, 1)))
+		node := NewView(addr, boot)
+		node.Size = c.Size
+		node.Heal = c.Heal
+		node.Swap = c.Swap
+		node.CryptoRand = c.CryptoRand
+		node.InDegreeAge = c.InDegreeAge
+		node.InDegreeTTL = c.InDegreeTTL
 		nodes[addr] = &node
 	}
 
