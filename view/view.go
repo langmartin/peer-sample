@@ -126,7 +126,7 @@ func (v *View) Permute() {
 	c := v.Config
 	l := len(v.Peer)
 	for i := l - 1; i > 0; i-- {
-		j := c.rint(l)
+		j := c.rint(i)
 		v.Peer[i], v.Peer[j] = v.Peer[j], v.Peer[i]
 	}
 }
