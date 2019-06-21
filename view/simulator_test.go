@@ -29,6 +29,7 @@ func testPush(v *View, ns nodes) {
 			peer.Select(b)
 		}
 	}
+	v.increaseAge()
 }
 
 // testPushPull implements the push + pull algorithm
@@ -36,14 +37,17 @@ func testPushPull(v *View, ns nodes) {
 	p := v.SelectPeer()
 	b := v.Push(p.Addr)
 	if rand.Float32() > failure {
+		// missing in the case the node died
 		if peer, ok := ns[p.Addr]; ok {
 			peer.Receive(b)
 			r := peer.Push(v.Addr)
 			if rand.Float32() > replyFail {
 				v.Select(r)
 			}
+			peer.increaseAge()
 		}
 	}
+	v.increaseAge()
 }
 
 func testKill(v *View, ns nodes, morgue morgue, time int) bool {

@@ -237,8 +237,6 @@ func (v *View) Select(buf Buffer) {
 	v.rmOld()
 	v.rmHead()
 	v.rmRand()
-	v.increaseAge()
-
 }
 
 // ========================================================================
@@ -255,7 +253,6 @@ func (v *View) Push(peerAddr string) Buffer {
 		}
 		b = append(b, v.Peer[i])
 	}
-	v.increaseAge()
 	return b
 }
 
