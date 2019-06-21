@@ -81,10 +81,10 @@ func TestPush(t *testing.T) {
 	rand.Seed(1)
 	require.Equal(t, Buffer{
 		{Addr: "n0", Age: 0, InDegree: 0, OutDegree: 29},
-		{Addr: "n29", Age: 1, InDegree: 0, OutDegree: 0},
-		{Addr: "n14", Age: 1, InDegree: 0, OutDegree: 0},
-		{Addr: "n2", Age: 1, InDegree: 0, OutDegree: 0},
-		{Addr: "n16", Age: 1, InDegree: 0, OutDegree: 0},
+		{Addr: "n7", Age: 0, InDegree: 0, OutDegree: 0},
+		{Addr: "n20", Age: 0, InDegree: 0, OutDegree: 0},
+		{Addr: "n5", Age: 0, InDegree: 0, OutDegree: 0},
+		{Addr: "n25", Age: 0, InDegree: 0, OutDegree: 0},
 	},
 		v.Push("n31"))
 }
@@ -99,10 +99,26 @@ func TestSelect(t *testing.T) {
 	n1.Select(b)
 
 	require.Equal(t, Buffer{
-		{"n1", 1, 0, 1},
-		{"n0", 1, 0, 1},
+		{"n1", 0, 0, 1},
+		{"n0", 0, 0, 1},
 	},
 		n1.Peer)
+}
+
+func TestAgeMax(t *testing.T) {
+	n := NewView("n0", "n1")
+	n.Peer = Buffer{
+		{"n1", 3, 0, 1},
+		{"n2", 2, 0, 1},
+		{"n3", 1, 0, 1},
+		{"n4", 4, 0, 1},
+		{"n5", 4, 0, 1},
+	}
+
+	require.Equal(t, 4, n.MaxAge())
+
+	n.Peer[2].Age = 9
+	require.Equal(t, 2, n.MaxAge())
 }
 
 func Test_rmDuplicates(t *testing.T) {
@@ -117,4 +133,18 @@ func Test_rmDuplicates(t *testing.T) {
 	n0.Peer = append(n0.Peer, &Message{"n1", 1, 0, 0})
 	n0.rmDuplicates()
 	require.Equal(t, Buffer{{"n1", 0, 0, 1}}, n0.Peer)
+
+	// dedup several
+	n0 = NewView("n0", "n1")
+	n0.Peer = append(n0.Peer, Buffer{
+		{"n1", 3, 0, 1},
+		{"n2", 2, 0, 1},
+		{"n2", 1, 0, 1},
+		{"n2", 4, 0, 1},
+	}...)
+	n0.rmDuplicates()
+	require.Equal(t, Buffer{
+		{"n1", 0, 0, 1},
+		{"n2", 1, 0, 1},
+	}, n0.Peer)
 }
